@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  tests:
+    name: Tests (${{ matrix.os }}, Python ${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ["3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install
+        run: python -m pip install -e ".[dev]"
+      - name: Run tests
+        run: python -m pytest
+
+  without-pydantic:
+    name: Tests without Pydantic
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -e . pytest
+      - run: python -m pytest
+
+  provider-sdks:
+    name: Adapters against the real provider SDKs (offline)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -e ".[dev,anthropic,openai]"
+      - run: python -m pytest tests/test_adapters.py -v
+
+  package:
+    name: Build and install the release (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build sdist and wheel
+        run: |
+          python -m pip install build twine
+          python -m build
+          python -m twine check dist/*
+      - name: Install the wheel in a fresh environment and test it
+        shell: bash
+        run: |
+          python -m venv fresh
+          if [ -f fresh/bin/python ]; then PY=fresh/bin/python; else PY=fresh/Scripts/python.exe; fi
+          $PY -m pip install dist/*.whl pytest pydantic
+          mkdir check && cp -r tests examples docs README.md CHANGELOG.md check/
+          cd check
+          ../$PY -c "import saw, sys; print(saw.__version__, saw.__file__)"
+          ../$PY -m pytest -q
+          ../$PY examples/agents/run_demos.py
+          ../$PY examples/custom_components.py
+      - uses: actions/upload-artifact@v4
+        if: matrix.os == 'ubuntu-latest'
+        with:
+          name: dist
+          path: dist/

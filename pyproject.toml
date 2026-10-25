@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+# The PyPI name "saw" belongs to an unrelated project (a SimFin API wrapper),
+# so the distribution is published under this name. The import name is `saw`.
+# Choose the final name before uploading to PyPI; see CHANGELOG.md.
+name = "saw-agent-security"
+version = "0.1.0"
+description = "In-process security runtime for LLM agent tool calls: permissions, approvals, result checks and audit logging."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = []
+keywords = ["llm", "agents", "security", "tool-calling", "approvals", "audit"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Security",
+    "Typing :: Typed",
+]
+# No license is declared yet: choosing one is the project owner's decision.
+
+[project.optional-dependencies]
+pydantic = ["pydantic>=2"]
+anthropic = ["anthropic"]
+openai = ["openai"]
+dev = ["pytest>=7", "pydantic>=2"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+saw = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+markers = [
+    "live: calls a real LLM provider; skipped unless API keys and model names are set",
+]
